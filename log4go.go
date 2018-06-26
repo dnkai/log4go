@@ -179,6 +179,17 @@ func (log Logger) AddFilter(name string, lvl Level, writer LogWriter) Logger {
 	return log
 }
 
+// set log level, set param 'name' to 'all' for all logfilter
+func (log Logger) SetFilterLvl(name string, lvl Level) {
+	if log[name]!=nil {
+		log[name].Level = lvl
+	} else if name=="all" {
+		for _, loger := range log {
+			loger.Level = lvl
+		}
+	}
+}
+
 /******* Logging *******/
 // Send a formatted log message internally
 func (log Logger) intLogf(lvl Level, format string, args ...interface{}) {
@@ -211,10 +222,16 @@ func (log Logger) intLogSkipf(skip_n int, lvl Level, format string, args ...inte
 		msg = fmt.Sprintf(format, args...)
 	}
 
+
+	local, err := time.LoadLocation("Asia/Shanghai")
+	if err!=nil { local, err = time.LoadLocation("Asia/Hong_Kong")
+	if err!=nil { local, err = time.LoadLocation("Asia/Chongqing")
+	if err!=nil { local = time.FixedZone("CST", 8*3600) } } }
+
 	// Make the log record
 	rec := &LogRecord{
 		Level:   lvl,
-		Created: time.Now(),
+		Created: time.Now().In(local),
 		Source:  src,
 		Message: msg,
 	}
@@ -325,7 +342,7 @@ func (log Logger) LogSkipc(skip_n int, lvl Level, closure func() string) {
 
 // Finest logs a message at the finest log level.
 // See Debug for an explanation of the arguments.
-func (log Logger) Finest(skip_n int, arg0 interface{}, args ...interface{}) {
+func (log Logger) Finest(arg0 interface{}, args ...interface{}) {
 	log.FineSkip(2, arg0, args...)
 }
 
