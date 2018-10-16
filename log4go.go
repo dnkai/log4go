@@ -83,6 +83,21 @@ var (
 	levelStrings = [...]string{"FNST", "FINE", "DEBG", "TRAC", "INFO", "WARN", "EROR", "CRIT"}
 )
 
+func LvlFromString(l string) Level {
+	l = strings.ToUpper(l)
+	switch l{
+	case "FNST", "FINEST", "ALL": return FINEST
+	case "FINE": return FINE
+	case "DEBUG","DEBG": return DEBUG
+	case "TRACE", "TRAC": return TRACE
+	case "INFO", "I": return INFO
+	case "WARNING", "WARN", "W": return WARNING
+	case "ERROR", "EROR", "ERR", "E": return ERROR
+	case "CRITICAL", "CRIT", "NONE": return CRITICAL
+	default: return FINEST
+	}
+}
+
 func (l Level) String() string {
 	if l < 0 || int(l) > len(levelStrings) {
 		return "UNKNOWN"
