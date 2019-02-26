@@ -226,10 +226,11 @@ func (log Logger) intLogSkipf(skip_n int, lvl Level, format string, args ...inte
 	}
 
 	// Determine caller func
-	pc, _, lineno, ok := runtime.Caller(skip_n)
+	pc, file, lineno, ok := runtime.Caller(skip_n)
 	src := ""
 	if ok {
-		src = fmt.Sprintf("%s:%d", runtime.FuncForPC(pc).Name(), lineno)
+		src = fmt.Sprintf("%s[%s:%d]", runtime.FuncForPC(pc).Name(),
+			file[strings.LastIndex(file, "/")+1:], lineno)
 	}
 
 	msg := format
