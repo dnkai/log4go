@@ -38,6 +38,11 @@ type FileLogWriter struct {
 	// Keep old logfiles (.001, .002, etc)
 	rotate    bool
 	maxbackup int
+
+	// The file name format
+	filename_format string
+	// ext info
+	ext_info LogExtInfo
 }
 
 // This is the FileLogWriter's output method
@@ -64,9 +69,14 @@ func NewFileLogWriter(fname string, rotate bool) *FileLogWriter {
 		rec:       make(chan *LogRecord, LogBufferLength),
 		rot:       make(chan bool),
 		filename:  fname,
+		filename_format:  fname,
 		format:    "[%D %T] [%L] (%S) %M",
 		rotate:    rotate,
 		maxbackup: 999,
+	}
+
+	if bfilenameformat := w.isFileNameFormat(); bfilenameformat {
+		w.filename = w.buildFileNameByFileNameFormat()
 	}
 
 	// open the file for the first time
@@ -78,7 +88,7 @@ func NewFileLogWriter(fname string, rotate bool) *FileLogWriter {
 	go func() {
 		defer func() {
 			if w.file != nil {
-				fmt.Fprint(w.file, FormatLogRecord(w.trailer, &LogRecord{Created: time.Now()}))
+				fmt.Fprint(w.file, w.formatLogRecord(w.trailer, &LogRecord{Created: time.Now()}))
 				w.file.Close()
 			}
 		}()
@@ -105,7 +115,7 @@ func NewFileLogWriter(fname string, rotate bool) *FileLogWriter {
 				}
 
 				// Perform the write
-				n, err := fmt.Fprint(w.file, FormatLogRecord(w.format, rec))
+				n, err := fmt.Fprint(w.file, w.formatLogRecord(w.format, rec))
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "FileLogWriter(%q): %s\n", w.filename, err)
 					return
@@ -128,9 +138,13 @@ func (w *FileLogWriter) Rotate() {
 
 // If this is called in a threaded context, it MUST be synchronized
 func (w *FileLogWriter) intRotate() error {
+	if is_fileformat := w.isFileNameFormat(); is_fileformat {
+		return w.intRotateByFileNameFormat()
+	}
+
 	// Close any log file that may be open
 	if w.file != nil {
-		fmt.Fprint(w.file, FormatLogRecord(w.trailer, &LogRecord{Created: time.Now()}))
+		fmt.Fprint(w.file, w.formatLogRecord(w.trailer, &LogRecord{Created: time.Now()}))
 		w.file.Close()
 	}
 
@@ -181,7 +195,7 @@ func (w *FileLogWriter) intRotate() error {
 	w.file = fd
 
 	now := time.Now()
-	fmt.Fprint(w.file, FormatLogRecord(w.header, &LogRecord{Created: now}))
+	fmt.Fprint(w.file, w.formatLogRecord(w.header, &LogRecord{Created: now}))
 
 	// Set the daily open date to the current date
 	w.daily_opendate = now.Day()
@@ -201,12 +215,12 @@ func (w *FileLogWriter) SetFormat(format string) *FileLogWriter {
 }
 
 // Set the logfile header and footer (chainable).  Must be called before the first log
-// message is written.  These are formatted similar to the FormatLogRecord (e.g.
+// message is written.  These are formatted similar to the w.formatLogRecord (e.g.
 // you can use %D and %T in your header/footer for date and time).
 func (w *FileLogWriter) SetHeadFoot(head, foot string) *FileLogWriter {
 	w.header, w.trailer = head, foot
 	if w.maxlines_curlines == 0 {
-		fmt.Fprint(w.file, FormatLogRecord(w.header, &LogRecord{Created: time.Now()}))
+		fmt.Fprint(w.file, w.formatLogRecord(w.header, &LogRecord{Created: time.Now()}))
 	}
 	return w
 }
@@ -261,4 +275,12 @@ func NewXMLLogWriter(fname string, rotate bool) *FileLogWriter {
 		<source>%S</source>
 		<message>%M</message>
 	</record>`).SetHeadFoot("<log created=\"%D %T\">", "</log>")
+}
+
+// NewJSONLogWriter is a utility method for creating a FileLogWriter set up to
+// output JSON record log messages instead of line-based ones.
+func NewJSONLogWriter(fname string, rotate bool) *FileLogWriter {
+	return NewFileLogWriter(fname, rotate).SetFormat(
+		`%A %B [%D %T] [%L] (%S) %M
+	`).SetOutputMode(OutputModeJson)
 }

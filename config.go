@@ -110,6 +110,8 @@ func (log Logger) LoadConfiguration(filename string) {
 			filt, good = xmlToFileLogWriter(filename, xmlfilt.Property, enabled)
 		case "xml":
 			filt, good = xmlToXMLLogWriter(filename, xmlfilt.Property, enabled)
+		case "json":
+			filt, good = xmlToJSONLogWriter(filename, xmlfilt.Property, enabled)
 		case "socket":
 			filt, good = xmlToSocketLogWriter(filename, xmlfilt.Property, enabled)
 		default:
@@ -263,6 +265,57 @@ func xmlToXMLLogWriter(filename string, props []xmlProperty, enabled bool) (*Fil
 	xlw.SetRotateSize(maxsize)
 	xlw.SetRotateDaily(daily)
 	return xlw, true
+}
+
+func xmlToJSONLogWriter(filename string, props []xmlProperty, enabled bool) (*FileLogWriter, bool) {
+	file := ""
+	format := "[%D %T] [%L] (%S) %M"
+	maxrecords := 0
+	maxsize := 0
+	daily := false
+	rotate := false
+	modulename := ""
+
+	// Parse properties
+	for _, prop := range props {
+		switch prop.Name {
+		case "filename":
+			file = strings.Trim(prop.Value, " \r\n")
+		case "format":
+			format = strings.Trim(prop.Value, " \r\n")
+		case "maxrecords":
+			maxrecords = strToNumSuffix(strings.Trim(prop.Value, " \r\n"), 1000)
+		case "maxsize":
+			maxsize = strToNumSuffix(strings.Trim(prop.Value, " \r\n"), 1024)
+		case "daily":
+			daily = strings.Trim(prop.Value, " \r\n") != "false"
+		case "rotate":
+			rotate = strings.Trim(prop.Value, " \r\n") != "false"
+		case "modulename":
+			modulename = strings.Trim(prop.Value, " \r\n")
+		default:
+			fmt.Fprintf(os.Stderr, "LoadConfiguration: Warning: Unknown property \"%s\" for xml filter in %s\n", prop.Name, filename)
+		}
+	}
+
+	// Check properties
+	if len(file) == 0 {
+		fmt.Fprintf(os.Stderr, "LoadConfiguration: Error: Required property \"%s\" for xml filter missing in %s\n", "filename", filename)
+		return nil, false
+	}
+
+	// If it's disabled, we're just checking syntax
+	if !enabled {
+		return nil, true
+	}
+
+	jlw := NewJSONLogWriter(file, rotate)
+	jlw.SetFormat(format)
+	jlw.SetRotateLines(maxrecords)
+	jlw.SetRotateSize(maxsize)
+	jlw.SetRotateDaily(daily)
+	jlw.SetModuleName(modulename)
+	return jlw, true
 }
 
 func xmlToSocketLogWriter(filename string, props []xmlProperty, enabled bool) (SocketLogWriter, bool) {
