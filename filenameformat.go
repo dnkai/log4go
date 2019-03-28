@@ -34,7 +34,7 @@ func (w *FileLogWriter) buildFileNameByFileNameFormat() string {
 				out.WriteString(fmt.Sprintf("%d", os.Getpid()))
 			case 'T':
 				// current time
-				out.WriteString(time.Now().Format("2006-01-02_15:04:05"))
+				out.WriteString(time.Now().Format("2006-01-02_15-04-05"))
 			}
 
 			if len(piece) > 1 {
