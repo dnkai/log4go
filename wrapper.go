@@ -104,10 +104,6 @@ func Logc(lvl Level, closure func() string) {
 	Global.intLogc(lvl, closure)
 }
 
-func SetLevel(level Level) {
-	Global.SetFilterLvl("all", level)
-}
-
 // Utility for finest log messages (see Debug() for parameter explanation)
 // Wrapper for (*Logger).Finest
 func Finest(arg0 interface{}, args ...interface{}) {
