@@ -34,7 +34,8 @@ func (w *FileLogWriter) buildFileNameByFileNameFormat() string {
 				out.WriteString(fmt.Sprintf("%d", os.Getpid()))
 			case 'T':
 				// current time
-				out.WriteString(time.Now().Format("2006-01-02_15-04-05"))
+				// out.WriteString(time.Now().Format("2006-01-02_15-04-05"))
+				out.WriteString(time.Now().Format("20060102150405"))
 			}
 
 			if len(piece) > 1 {
@@ -98,7 +99,7 @@ func (w *FileLogWriter) intRotateByFileNameFormat() error {
 	}
 
 	// Open the log file
-	fd, err := os.OpenFile(w.filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0660)
+	fd, err := os.OpenFile(w.filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 777)
 	if err != nil {
 		return err
 	}
